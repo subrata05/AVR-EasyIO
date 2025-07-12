@@ -16,7 +16,7 @@ All functions operate directly on AVR registers for maximum speed and transparen
 ### Requirements
 
 - AVR-GCC toolchain
-- Supported AVR microcontroller (e.g. ATmega328P)
+- Supported AVR microcontroller (e.g. ATmega328P/PB)
 - Optional: `avrdude` for flashing via ISP
 
 ### Example Circuit
