@@ -27,7 +27,7 @@ All functions operate directly on AVR registers for maximum speed and transparen
 
 ### Example Code
 
-See [`example.cpp`](./example.cpp) for a minimal demonstration.
+See `Examples/main.cpp` for a minimal demonstration.
 
 ```cpp
 #include "avr_easyio.h"
