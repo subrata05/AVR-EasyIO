@@ -2,8 +2,9 @@
  * example.cpp
  *
  * Demonstrates the use of avr_easyio.h on an ATmega‑based board.
- * Button on PD7 controls an LED on PD6; additionally, the code samples the
- * analog value on PC0 (ADC0) every 50 ms (e.g., for a potentiometer).
+ * Button on PD7 controls an LED’s brightness on PB2 (OC1B, Timer1) via PWM;
+ * additionally, the code samples the analog value on PC0 (ADC0) every 50 ms
+ * (e.g., for a potentiometer) to adjust the PWM duty cycle.
  *
  * Build (avr‑gcc):
  *   avr-gcc -mmcu=atmega328p -DF_CPU=8000000UL -Os example.cpp -o example.elf
@@ -22,32 +23,36 @@ int main(void)
     // Configure PD7 as input with pull‑up (button)
     pinMode(7, &DDRD, &PORTD, INPUT_PULLUP);
 
-    // Ensure LED on PD6 is output and LOW at start
-    digitalWrite(6, &DDRD, &PORTD, 0);
+    // Initialize LED on PB2 (PWM-capable, OC1B) to off
+    setPWM(PWM_PINB2, 0);
 
     // Optional: set up UART here to print analog values, omitted for brevity
 
     uint8_t  button = 0;
     uint16_t potVal = 0;
+    uint8_t  pwmVal = 0;
 
     while (1)
     {
         // Read button state (active‑low)
         button = digitalRead(7, &DDRD, &PIND);
 
+        // Read potentiometer on PC0 (ADC0)
+        potVal = analogRead(0, &DDRC, &PORTC);
+
+        // Map 10-bit ADC (0–1023) to 8-bit PWM (0–255)
+        pwmVal = potVal >> 2; // Divide by 4 (1024 / 4 = 256)
+
+        // Adjust PWM based on button state
         if (button == 0)
         {
-            digitalWrite(6, &DDRD, &PORTD, 0); // LED off
+            setPWM(PWM_PINB2, pwmVal); // LED brightness from potentiometer
         }
         else
         {
-            digitalWrite(6, &DDRD, &PORTD, 1); // LED on
+            setPWM(PWM_PINB2, 64); // LED at ~25% brightness
         }
-
-        // Read potentiometer on PC0 (ADC0)
-        potVal = analogRead(0, &DDRC, &PORTC);
 
         _delay_ms(50);
     }
 }
-
