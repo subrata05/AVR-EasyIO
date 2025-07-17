@@ -18,6 +18,16 @@
 #define INPUT 1
 #define INPUT_PULLUP 2
 
+// PWM pin constants
+typedef enum {
+    PWM_PIND3 = (1 << 0),   // 0x01, PIND3 (OC2B, Timer2), ~976Hz
+    PWM_PIND5 = (1 << 1),   // 0x02, PIND5 (OC0B, Timer0), ~486Hz
+    PWM_PIND6 = (1 << 2),   // 0x04, PIND6 (OC0A, Timer0), ~486Hz
+    PWM_PINB1 = (1 << 3),   // 0x08, PINB1 (OC1A, Timer1), ~1kHz
+    PWM_PINB2 = (1 << 4),   // 0x10, PINB2 (OC1B, Timer1), ~1kHz
+    PWM_PINB3 = (1 << 5)    // 0x20, PINB3 (OC2A, Timer2), ~976Hz
+} pwm_pin_t;
+
 /**
  * Configure a pin as INPUT, INPUT_PULLUP, or OUTPUT.
  * @param pin   Bit position within the port register (0–7)
@@ -116,6 +126,68 @@ static inline uint16_t analogRead(uint8_t pin,
         ;
 
     return ADC;
+}
+
+/**
+ * Configure PWM on a specified pin using Timer0, Timer1, or Timer2 (ATmega328P).
+ * Sets the pin as OUTPUT and configures fast PWM mode. Timer1 uses a TOP value of 999
+ * for ~1 kHz frequency (F_CPU = 8 MHz, prescaler = 8). Timer0 and Timer2 use a
+ * prescaler of 32 for ~486 Hz and ~976 Hz, respectively.
+ *
+ * @param pin      PWM pin identifier (pwm_pin_t enum)
+ * @param pwmVal   Duty cycle (0–255, where 255 is 100%)
+ * @returns        0 on success, 1 if invalid pin
+ */
+static inline uint8_t setPWM(pwm_pin_t pin, uint8_t pwmVal)
+{
+    if (pwmVal > 255) {
+        pwmVal = 255;
+    }
+
+    switch (pin) {
+        case PWM_PIND3:
+            DDRD |= (1 << DDD3); // Set PIND3 as output
+            TCCR2A = (1 << COM2B1) | (1 << WGM21) | (1 << WGM20); // Fast PWM, TOP = 0xFF
+            TCCR2B = (1 << CS21) | (1 << CS20); // Prescaler = 32
+            OCR2B = pwmVal;
+            break;
+        case PWM_PIND5:
+            DDRD |= (1 << DDD5); // Set PIND5 as output
+            TCCR0A = (1 << COM0B1) | (1 << WGM01) | (1 << WGM00); // Fast PWM, TOP = 0xFF
+            TCCR0B = (1 << CS01) | (1 << CS00); // Prescaler = 32
+            OCR0B = pwmVal;
+            break;
+        case PWM_PIND6:
+            DDRD |= (1 << DDD6); // Set PIND6 as output
+            TCCR0A = (1 << COM0A1) | (1 << WGM01) | (1 << WGM00); // Fast PWM, TOP = 0xFF
+            TCCR0B = (1 << CS01) | (1 << CS00); // Prescaler = 32
+            OCR0A = pwmVal;
+            break;
+        case PWM_PINB1:
+            DDRB |= (1 << DDB1); // Set PINB1 as output
+            TCCR1A = (1 << COM1A1) | (1 << WGM11); // Fast PWM, TOP = ICR1
+            TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11); // Prescaler = 8
+            ICR1 = 999; // TOP for 1 kHz
+            OCR1A = (uint16_t)((pwmVal * 999UL) / 255); // Scale to TOP = 999
+            break;
+        case PWM_PINB2:
+            DDRB |= (1 << DDB2); // Set PINB2 as output
+            TCCR1A = (1 << COM1B1) | (1 << WGM11); // Fast PWM, TOP = ICR1
+            TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11); // Prescaler = 8
+            ICR1 = 999; // TOP for 1 kHz
+            OCR1B = (uint16_t)((pwmVal * 999UL) / 255); // Scale to TOP = 999
+            break;
+        case PWM_PINB3:
+            DDRB |= (1 << DDB3); // Set PINB3 as output
+            TCCR2A = (1 << COM2A1) | (1 << WGM21) | (1 << WGM20); // Fast PWM, TOP = 0xFF
+            TCCR2B = (1 << CS21) | (1 << CS20); // Prescaler = 32
+            OCR2A = pwmVal;
+            break;
+        default:
+            return 1; // Invalid pin
+    }
+
+    return 0;
 }
 
 #endif // AVR_EASYIO_H
